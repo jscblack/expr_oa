@@ -1,0 +1,7 @@
+http://localhost:8000/listUsers/
+http://localhost:8000/addUser/
+http://localhost:8000/userDetail/2019214290
+http://localhost:8000/createProcess/
+http://localhost:8000/processesDetail/num
+http://localhost:8000/unhandledProcesses/
+http://localhost:8000/handledProcess/num
