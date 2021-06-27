@@ -35,3 +35,6 @@ class CustomUserManager(BaseUserManager): #自定义Manager管理器
         kwargs['is_superuser'] = True
         kwargs['is_staff'] = True
         return self._create_user(PersonNo,password,PersonEmail,PersonLastName,PersonFirstName,PersonGender,PersonAge,PersonPhone,PersonJob,PersonDirectSuperior,**kwargs)
+
+
+        

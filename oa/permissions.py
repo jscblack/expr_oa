@@ -50,12 +50,11 @@ class IsOwnerOrTargetOfRequest(permissions.BasePermission):
 class IsCapableOfHandler(permissions.BasePermission):
     #检查是否拥有该用户是否拥有目前处理该流程的权限
     def has_permission(self, request, view):
-        
         if not request.user.is_authenticated:
             return False
         elif request.method in permissions.SAFE_METHODS or request.method=='PUT':
             # Check permissions for read-only request
-            Pid = view.kwargs['pk']
+            Pid = view.kwargs['ProcessOriginalEvent']
             # qsz = ProcessRaiseEvent.objects.values_list('ProcessRaiser', flat=True).get(pk=Pid)
             qst = ProcessHandleEvent.objects.filter(ProcessOriginalEvent=Pid,ProcessHandleStatus=2).values('ProcessHandler')
             AuthList = []
@@ -66,3 +65,28 @@ class IsCapableOfHandler(permissions.BasePermission):
             # Check permissions for write request
             return False
 
+class IsAvailableOfModify(permissions.BasePermission):
+    #检查该用户是否拥有流程的所有权Get以及是否可以修改
+    def has_permission(self, request, view):
+        if not request.user.is_authenticated:
+            return False
+        elif request.method in permissions.SAFE_METHODS:
+            # Check permissions for read-only request
+            Pid = view.kwargs['pk']
+            # qsz = ProcessRaiseEvent.objects.values_list('ProcessRaiser', flat=True).get(pk=Pid)
+            print(Pid)
+            qst = ProcessRaiseEvent.objects.filter(id=Pid).values('ProcessRaiser')
+            qst=qst[0]
+            # print(qst)
+            return request.user.PersonNo == qst['ProcessRaiser']
+        else:
+            Pid = view.kwargs['pk']
+            # qsz = ProcessRaiseEvent.objects.values_list('ProcessRaiser', flat=True).get(pk=Pid)
+            print(Pid)
+            qst = ProcessRaiseEvent.objects.filter(id=Pid).values('ProcessRaiser')
+            qst=qst[0]
+            if request.user.PersonNo != qst['ProcessRaiser']:
+                print("fail put")
+                return False
+
+            return ProcessRaiseEvent.objects.values_list('ProcessRaiseStatus', flat=True).get(pk=Pid) in [1,5]

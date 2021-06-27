@@ -48,6 +48,7 @@ class ProcessRaiseEvent(models.Model):
         (2, 'Handling'),#待处理
         (3, 'HandledAndAccepted'),#已处理并接受
         (4, 'HandledAndRejected'),#已处理并拒绝
+        (5, 'WaittingToBeModified'),#需要修改
     ]
     ProcessRaiser=models.ForeignKey("CustomUsers", on_delete=models.PROTECT)
     ProcessRaiseTime=models.DateTimeField(auto_now_add=True)
@@ -58,8 +59,8 @@ class ProcessRaiseEvent(models.Model):
         verbose_name_plural = "processraiseevents"
 
     def __str__(self):
-        return f"({self.id})"
-        # pass
+        # return f"({self.id}) {self.ProcessRaiseInfo}"
+        pass
 
     # def get_absolute_url(self):
     #     return reverse("processraiseevent_detail", kwargs={"pk": self.pk})

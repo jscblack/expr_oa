@@ -33,5 +33,6 @@ urlpatterns = [
     path("listProcesses/",ListProcess.as_view()),
     path("processDetail/<int:pk>/",ProcessDetail.as_view()),
     path("listUnhandledProcess/",ListUnhandledProcess.as_view()),
-    path("handleProcess/<int:pk>/",HandleProcess.as_view())
+    path("handleProcess/<int:ProcessOriginalEvent>/",HandleProcess.as_view()),
+    path("modifyProcessRaiseEvent/<int:pk>/",modifyProcessRaiseEvent.as_view()),
 ]
