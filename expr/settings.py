@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     "rest_framework",
     "oa",
+    "drf_multiple_model",
 ]
 
 AUTH_USER_MODEL = 'oa.CustomUsers'

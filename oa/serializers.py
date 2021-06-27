@@ -109,13 +109,13 @@ class CreateProcessSerializer(serializers.ModelSerializer):
             ProcessSteps=value['reqRev']
             print(ProcessSteps)
             if self.context['request'].user.PersonNo in ProcessSteps:
-                raise serializers.ValidationError("请求参数不合法")
+                raise serializers.ValidationError("流转目标不可以为自己")
             res=CustomUsers.objects.filter(PersonNo__in=ProcessSteps)
             res_count=len(res)
             print(res_count)
             print(len(ProcessSteps))
             if res_count!=len(ProcessSteps):
-                raise serializers.ValidationError("请求参数不合法")
+                raise serializers.ValidationError("流转目标必须为已存在的用户")
         except ValidationError as e:
             raise serializers.ValidationError("请求参数不合法")
         else:
@@ -135,10 +135,55 @@ class CreateProcessSerializer(serializers.ModelSerializer):
             ProcessHandleEvent.objects.create(
                 ProcessOriginalEvent=processRaiseEvent,
                 ProcessHandleLevel=(i+1),
-                ProcessHandleStatus=(2 if i == 1 else 1),
+                ProcessHandleStatus=(2 if i == 0 else 1),
                 ProcessHandler=CustomUsers.objects.filter(PersonNo=ProcessSteps[i])[0]
             )
         return processRaiseEvent
+
+class ListProcessSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProcessRaiseEvent
+        fields = [
+            'id',
+            'ProcessRaiser',
+            'ProcessRaiseTime',
+            'ProcessRaiseInfo',
+            'ProcessRaiseStatus',
+        ]
+
+class ProcessDetailSerializerOfProcessRaiseEvent(serializers.ModelSerializer):
+    class Meta:
+        model = ProcessRaiseEvent
+        fields = [
+            'id',
+            'ProcessRaiser',
+            'ProcessRaiseTime',
+            'ProcessRaiseInfo',
+            'ProcessRaiseStatus',
+        ]
+
+class ProcessDetailSerializerOfProcessHandleEvent(serializers.ModelSerializer):
+    class Meta:
+        model = ProcessHandleEvent
+        fields = [
+            'ProcessHandleLevel',
+            'ProcessHandleTime',
+            'ProcessHandleStatus',
+            'ProcessHandler',
+            'ProcessHandleInfo',
+            'ProcessHandleResult',
+        ]
+
+class ListUnhandledProcessSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProcessRaiseEvent
+        fields = [
+            'id',
+            'ProcessRaiser',
+            'ProcessRaiseTime',
+            'ProcessRaiseInfo',
+            'ProcessRaiseStatus',
+        ]
 
 #{"reqInfo": "测试"}
 #{"reqRev": [2019214290,2019214288]}

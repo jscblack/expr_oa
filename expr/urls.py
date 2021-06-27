@@ -29,6 +29,8 @@ urlpatterns = [
     path("listUsers/", CustomUserAll.as_view()),
     path("addUser/", CustomUserAdd.as_view()),
     path("userDetail/<int:pk>/", CustomUserDetail.as_view()),
-    path("createProcess/",CreateProcess.as_view())
-    #path("listProcesses/",ListProcess.as_view())
+    path("createProcess/",CreateProcess.as_view()),
+    path("listProcesses/",ListProcess.as_view()),
+    path("processDetail/<int:pk>/",ProcessDetail.as_view()),
+    path("listUnhandledProcess/",ListUnhandledProcess.as_view())
 ]
