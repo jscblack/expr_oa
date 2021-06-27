@@ -11,11 +11,20 @@ class CustomUserAllSerializer(serializers.ModelSerializer):
             "PersonFirstName",
         ]
 
-class CustomUserDetailSerializer(serializers.ModelSerializer):
+class CustomUserDetailSerializerForGet(serializers.ModelSerializer):
     class Meta:
         model = CustomUsers
         exclude=[
-            "password"
+            "password",
+            "groups",
+            "user_permissions",
+        ]
+
+class CustomUserDetailSerializerForPut(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUsers
+        fields=[
+            "PersonGender"
         ]
 
 class CustomUserAddSerializer(serializers.ModelSerializer):
@@ -185,5 +194,45 @@ class ListUnhandledProcessSerializer(serializers.ModelSerializer):
             'ProcessRaiseStatus',
         ]
 
+class HandleProcessSerializerForGet(serializers.ModelSerializer):
+    class Meta:
+        model = ProcessHandleEvent
+        exclude=[
+            "id",
+        ]
+        # fields = [
+        #     'ProcessHandleLevel',
+        #     'ProcessHandleTime',
+        #     'ProcessHandleStatus',
+        #     'ProcessHandler',
+        #     'ProcessHandleInfo',
+        #     'ProcessHandleResult',
+        # ]
+        
+class HandleProcessSerializerForPut(serializers.ModelSerializer):
+    class Meta:
+        model = ProcessHandleEvent
+        exclude=[
+            "id",
+            'ProcessHandleLevel',
+            'ProcessHandleTime',
+            'ProcessHandleStatus',
+            'ProcessOriginalEvent',
+            'ProcessHandler',
+        ]
+        # fields = [
+        #     'ProcessHandleLevel',
+        #     'ProcessHandleTime',
+        #     'ProcessHandleStatus',
+        #     'ProcessHandler',
+        #     'ProcessHandleInfo',
+        #     'ProcessHandleResult',
+        # ]
+    # def create(self,validated_data):
+    #     processHandleEvent=ProcessHandleEvent.objects.create(
+    #         **validated_data
+    #     )
+    #     return processHandleEvent
+    
 #{"reqInfo": "测试"}
 #{"reqRev": [2019214290,2019214288]}

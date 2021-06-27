@@ -32,5 +32,6 @@ urlpatterns = [
     path("createProcess/",CreateProcess.as_view()),
     path("listProcesses/",ListProcess.as_view()),
     path("processDetail/<int:pk>/",ProcessDetail.as_view()),
-    path("listUnhandledProcess/",ListUnhandledProcess.as_view())
+    path("listUnhandledProcess/",ListUnhandledProcess.as_view()),
+    path("handleProcess/<int:pk>/",HandleProcess.as_view())
 ]

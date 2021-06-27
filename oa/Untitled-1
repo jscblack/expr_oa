@@ -5,3 +5,4 @@ http://localhost:8000/createProcess/
 http://localhost:8000/listProcesses/
 http://localhost:8000/processDetail/54
 http://localhost:8000/listUnhandledProcess/
+http://localhost:8000/handleProcess/54

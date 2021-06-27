@@ -7,7 +7,7 @@ class IsSuperiorOfRequestOrAdmin(permissions.BasePermission):
     def has_permission(self, request, view):
         if not request.user.is_authenticated:
             return False
-        elif request.method in permissions.SAFE_METHODS:
+        elif request.method in permissions.SAFE_METHODS or request.method=='PUT':
             # Check permissions for read-only request
             AuthList=[request.user.PersonNo]
             # print('lll')
@@ -42,6 +42,25 @@ class IsOwnerOrTargetOfRequest(permissions.BasePermission):
             for a in qst:
                 AuthList.append(a['ProcessHandler'])
             AuthList.append(qsz)
+            return request.user.PersonNo in AuthList
+        else:
+            # Check permissions for write request
+            return False
+
+class IsCapableOfHandler(permissions.BasePermission):
+    #检查是否拥有该用户是否拥有目前处理该流程的权限
+    def has_permission(self, request, view):
+        
+        if not request.user.is_authenticated:
+            return False
+        elif request.method in permissions.SAFE_METHODS or request.method=='PUT':
+            # Check permissions for read-only request
+            Pid = view.kwargs['pk']
+            # qsz = ProcessRaiseEvent.objects.values_list('ProcessRaiser', flat=True).get(pk=Pid)
+            qst = ProcessHandleEvent.objects.filter(ProcessOriginalEvent=Pid,ProcessHandleStatus=2).values('ProcessHandler')
+            AuthList = []
+            for a in qst:
+                AuthList.append(a['ProcessHandler'])
             return request.user.PersonNo in AuthList
         else:
             # Check permissions for write request

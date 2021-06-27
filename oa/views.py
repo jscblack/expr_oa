@@ -15,20 +15,28 @@ class CustomUserAll(generics.ListAPIView):
     serializer_class = CustomUserAllSerializer
     # serializer_class = CustomUserSerializer
     
-class CustomUserDetail(generics.RetrieveAPIView):
+class CustomUserDetail(generics.RetrieveUpdateAPIView):
     #users/pk
     permission_classes = [IsSuperiorOfRequestOrAdmin]
     #permission_classes = [permissions.IsAuthenticated]
     def get_queryset(self):
         print(self.kwargs['pk'])
         queryset = CustomUsers.objects.filter(PersonNo=self.kwargs['pk'])
+        print(len(queryset))
         return queryset
     # 只可以查看自己直接下属或间接下属的详细信息
     # def get_serializer_class(self):
     #     if self.request.method == "PUT":
     #         return CustomUserDetailUpdateSerializer
     #     return CustomUserDetailSerializer
-    serializer_class = CustomUserDetailSerializer
+    def get_serializer_class(self):
+        if self.request.method == "PUT":
+            #print("hhh")
+            return CustomUserDetailSerializerForPut
+        elif self.request.method == "GET":
+            print("hhh")
+            return CustomUserDetailSerializerForGet
+    # serializer_class = CustomUserDetailSerializerForGet
 
 class CustomUserAdd(generics.CreateAPIView):
     #只有管理员可创建用户
@@ -75,7 +83,7 @@ class ListUnhandledProcess(generics.ListAPIView):
     #查看待办的所有流程，无参
     permission_classes = [permissions.IsAuthenticated]
     def get_queryset(self):
-        qst = ProcessHandleEvent.objects.filter(ProcessHandler=self.request.user).filter(ProcessHandleStatus=2).values('ProcessOriginalEvent')
+        qst = ProcessHandleEvent.objects.filter(ProcessHandler=self.request.user, ProcessHandleStatus=2).values('ProcessOriginalEvent')
         ProcList=[]
         for q in qst:
             ProcList.append(q['ProcessOriginalEvent'])
@@ -83,6 +91,21 @@ class ListUnhandledProcess(generics.ListAPIView):
         return queryset
     serializer_class = ListUnhandledProcessSerializer
 
-class HandleProcess(generics.UpdateAPIView):
+class HandleProcess(generics.RetrieveUpdateAPIView):
     #处理流程，参数为流程号
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsCapableOfHandler]
+    def get_queryset(self):
+        print(self.kwargs['pk'])
+        queryset = ProcessHandleEvent.objects.filter(ProcessHandler=self.request.user,ProcessOriginalEvent=self.kwargs['pk'], ProcessHandleStatus=2)
+        # queryset = ProcessHandleEvent.objects.all()
+        print(len(queryset))
+        return queryset
+    # serializer_class = HandleProcessSerializer
+
+    def get_serializer_class(self):
+        if self.request.method == "PUT":
+            # print("hhh")
+            return HandleProcessSerializerForPut
+        elif self.request.method == "GET":
+            # print("hhh")
+            return HandleProcessSerializerForGet

@@ -58,7 +58,8 @@ class ProcessRaiseEvent(models.Model):
         verbose_name_plural = "processraiseevents"
 
     def __str__(self):
-        pass
+        return f"({self.id})"
+        # pass
 
     # def get_absolute_url(self):
     #     return reverse("processraiseevent_detail", kwargs={"pk": self.pk})
@@ -87,4 +88,5 @@ class ProcessHandleEvent(models.Model):
         verbose_name_plural = 'ProcessHandleEvents'
 
     def __str__(self):
+        # return f"({self.ProcessOriginalEvent})"
         pass
