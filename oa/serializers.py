@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from oa.models import *
 from jsonschema  import  ValidationError, validate
-
+import phonenumbers
 class CustomUserAllSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUsers
@@ -43,6 +43,15 @@ class CustomUserDetailSerializerForPutForSelf(serializers.ModelSerializer):
                 raise serializers.ValidationError("年龄不合法")
             return value
 
+        def validate_PersonPhone(self, value):
+            try:
+                z=phonenumbers.parse("+86"+value, None)
+                if phonenumbers.is_valid_number(z):
+                    return value
+                else:
+                    raise serializers.ValidationError("手机号不合法")
+            except Exception as e:
+                raise serializers.ValidationError("手机号不合法")
         def validate(self, attrs):
         # 传进来什么参数，就返回什么参数，一般情况下用attrs
             if attrs['password'] != attrs['password_confirm']:
@@ -91,6 +100,15 @@ class CustomUserDetailSerializerForPutForAdmin(serializers.ModelSerializer):
         if value<=0 or value>=200:
             raise serializers.ValidationError("年龄不合法")
         return value
+    def validate_PersonPhone(self, value):
+        try:
+            z=phonenumbers.parse("+86"+value, None)
+            if phonenumbers.is_valid_number(z):
+                return value
+            else:
+                raise serializers.ValidationError("手机号不合法")
+        except Exception as e:
+            raise serializers.ValidationError("手机号不合法")
 
     def validate(self, attrs):
         print("validate")
@@ -147,7 +165,15 @@ class CustomUserAddSerializer(serializers.ModelSerializer):
         if value<=0 or value>=200:
             raise serializers.ValidationError("年龄不合法")
         return value
-
+    def validate_PersonPhone(self, value):
+        try:
+            z=phonenumbers.parse("+86"+value, None)
+            if phonenumbers.is_valid_number(z):
+                return value
+            else:
+                raise serializers.ValidationError("手机号不合法")
+        except Exception as e:
+            raise serializers.ValidationError("手机号不合法")
     def validate(self, attrs):
     # 传进来什么参数，就返回什么参数，一般情况下用attrs
         if attrs['password'] != attrs['password_confirm']:
@@ -166,6 +192,7 @@ class CreateProcessSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProcessRaiseEvent
         fields = [
+            'ProcessRaiseTitle',
             'ProcessRaiseInfo',
             'CreateProcessSteps'
         ]
@@ -256,6 +283,7 @@ class ProcessDetailSerializerOfProcessRaiseEvent(serializers.ModelSerializer):
         model = ProcessRaiseEvent
         fields = [
             'id',
+            'ProcessRaiseTitle',
             'ProcessRaiser',
             'ProcessRaiseTime',
             'ProcessRaiseInfo',
@@ -279,18 +307,20 @@ class ListUnhandledProcessSerializer(serializers.ModelSerializer):
         model = ProcessRaiseEvent
         fields = [
             'id',
+            'ProcessRaiseTitle',
             'ProcessRaiser',
             'ProcessRaiseTime',
-            'ProcessRaiseInfo',
             'ProcessRaiseStatus',
         ]
 
 class HandleProcessSerializerForGet(serializers.ModelSerializer):
     lookup_field = 'ProcessOriginalEvent'
+    ProcessOriginalEventTitle = serializers.CharField(source='ProcessOriginalEvent.ProcessRaiseTitle')
     class Meta:
         model = ProcessHandleEvent
         fields=[
-            "ProcessOriginalEvent",
+            'ProcessOriginalEvent',
+            'ProcessOriginalEventTitle',
             "ProcessHandler",
             "ProcessHandleLevel",
             "ProcessHandleInfo",
@@ -372,6 +402,7 @@ class ModifyProcessRaiseEventSerializerForPut(serializers.ModelSerializer):
     class Meta:
         model = ProcessRaiseEvent
         fields=[
+            "ProcessRaiseTitle",
             "ProcessRaiseInfo",
         ]
     
@@ -391,6 +422,7 @@ class ModifyProcessRaiseEventSerializerForPut(serializers.ModelSerializer):
             return value
     
     def update(self,instance,validated_data):
+        instance.ProcessRaiseTitle=validated_data.get('ProcessRaiseTitle',None)
         instance.ProcessRaiseInfo=validated_data.get('ProcessRaiseInfo',None)
         instance.ProcessRaiseStatus=1
         instance.save()
@@ -402,9 +434,269 @@ class ModifyProcessRaiseEventSerializerForPut(serializers.ModelSerializer):
 class ModifyProcessRaiseEventSerializerForGet(serializers.ModelSerializer):
     class Meta:
         model = ProcessRaiseEvent
-        fields="__all__"
+        fields=[
+            "id",
+            "ProcessRaiseTitle",
+            "ProcessRaiser",
+            "ProcessRaiseTime",
+            "ProcessRaiseInfo",
+            "ProcessRaiseStatus",
+        ]
+
+class CreateNoticeSerializer(serializers.ModelSerializer):
+    CreateNoticeReceivers = serializers.JSONField(write_only=True)
+    NoticeNeedToRelay=serializers.BooleanField(write_only=True)
+    #CreateProcessReceivers = serializers.CharField(max_length=2048)
+    class Meta:
+        model = NoticeRaiseEvent
+        fields = [
+            'NoticeRaiseTitle',
+            'NoticeRaiseInfo',
+            'CreateNoticeReceivers',
+            'NoticeNeedToRelay'
+        ]
+        extra_kwargs = {
+            'CreateNoticeReceivers': {'write_only':True, 'required': True},
+            'NoticeNeedToRelay': {'write_only':True, 'required': True}
+        }
+
+    def validate_NoticeRaiseInfo(self, value):
+        schema  =  {
+            "type":"object",
+            "properties":{
+                "ntcInfo" : {"type" :"string"}
+            },
+            "required" : ["ntcInfo"]
+        }
+        try:
+            validate(value, schema)
+        except ValidationError as e:
+            raise serializers.ValidationError("请求参数不合法")
+        else:
+            return value
+
+    def validate_CreateNoticeReceivers(self, value):
+        schema  =  {
+            "type":"object",
+            "properties":{
+                "ntcRev" : {
+                    "type" :"array",
+                    "items" : {
+                        "type": "integer"
+                    },
+                    "minItems": 1,
+                    "uniqueItems": True
+                },
+            },
+            "required" : ["ntcRev"]
+        }
+        try:
+            validate(value, schema)
+            NoticeReceivers=value['ntcRev']
+            print(NoticeReceivers)
+            if self.context['request'].user.PersonNo in NoticeReceivers:
+                raise serializers.ValidationError("通知目标不可以为自己")
+            qst=CustomUsers.objects.filter(PersonNo__in=NoticeReceivers)
+            for q in qst:
+                if q.PersonDirectSuperior!=self.context['request'].user:
+                    raise serializers.ValidationError("通知目标必须为直接下级")
+        except ValidationError as e:
+            raise serializers.ValidationError("请求参数不合法")
+        else:
+            return value
+
+    def create(self,validated_data):
+        NoticeReceivers=validated_data.pop('CreateNoticeReceivers',None)
+        noticeNeedToRelay=validated_data.pop('NoticeNeedToRelay',None)
+        #handle
+        print("debug")
+        NoticeReceivers=NoticeReceivers['ntcRev']#array
+        #print(NoticeReceivers)
+        print(validated_data)
+        noticeRaiseEvent = NoticeRaiseEvent.objects.create(
+            NoticeRaiser=self.context['request'].user,
+            **validated_data
+            )
+        for i in range(len(NoticeReceivers)):
+            #当前级处理者为NoticeReceivers[i] 当前级为i
+            NoticeReceiveEvent.objects.create(
+                NoticeOriginalEvent=noticeRaiseEvent,
+                NoticeReceiver=CustomUsers.objects.filter(PersonNo=NoticeReceivers[i])[0],
+                NeedToRelay=noticeNeedToRelay & CustomUsers.objects.filter(PersonDirectSuperior=NoticeReceivers[i]).exists()#有下属才行
+            )
+        return noticeRaiseEvent
+
+class ModifyNoticeDetailSerializerForPut(serializers.ModelSerializer):
+    class Meta:
+        model = NoticeRaiseEvent
+        fields=[
+            "NoticeRaiseTitle",
+            "NoticeRaiseInfo",
+        ]
+    def validate_NoticeRaiseInfo(self, value):
+        schema  =  {
+            "type":"object",
+            "properties":{
+                "ntcInfo" : {"type" :"string"}
+            },
+            "required" : ["ntcInfo"]
+        }
+        try:
+            validate(value, schema)
+        except ValidationError as e:
+            raise serializers.ValidationError("请求参数不合法")
+        else:
+            return value
+    
+    def update(self,instance,validated_data):
+        instance.NoticeRaiseTitle=validated_data.get('NoticeRaiseTitle',None)
+        instance.NoticeRaiseInfo=validated_data.get('NoticeRaiseInfo',None)
+        instance.save()
+        # NoticeOriginalEvent=instance.id 全部 NoticeRead=0
+        NoticeReceiveEvent.objects.filter(NoticeOriginalEvent=instance.id).update(NoticeRead=0)
+        return instance
+
+class ModifyNoticeDetailSerializerForGet(serializers.ModelSerializer):
+    class Meta:
+        model = NoticeRaiseEvent
+        fields=[
+            "id",
+            "NoticeRaiseTitle",
+            "NoticeRaiser",
+            "NoticeRaiseTime",
+            "NoticeRaiseInfo",
+        ]
+
+class NoticeDetailSerializerForPutForReceiver(serializers.ModelSerializer):
+    NoticeRead=serializers.BooleanField(write_only=True) #是否已读
+    class Meta:
+        model = NoticeRaiseEvent
+        fields=[
+            "NoticeRead",
+        ]
+        extra_kwargs = {
+            'NoticeRead': {'write_only':True, 'required': True},
+        }
+
+    def validate_NoticeRead(self, value):
+        if value!=True:
+            raise serializers.ValidationError("请勾选已读")
+        else:
+            return value
+    
+    def update(self,instance,validated_data):
+        ist=NoticeReceiveEvent.objects.get(NoticeOriginalEvent=instance.id, NoticeReceiver=self.context['request'].user)
+        ist.NoticeRead=True
+        ist.save()
+        return instance
+
+class NoticeDetailSerializerForPutForRelayer(serializers.ModelSerializer):
+    NoticeRelay=serializers.BooleanField(write_only=True) #是否已读
+    NoticeReceivers = serializers.JSONField(write_only=True)
+    NoticeNeedToRelay=serializers.BooleanField(write_only=True)
+    class Meta:
+        model = NoticeRaiseEvent
+        fields=[
+            "NoticeRelay", #是否完成转发
+            "NoticeReceivers", #接收者
+            "NoticeNeedToRelay",  #下一级是否需要转发
+        ]
+        extra_kwargs = {
+            'NoticeRelay': {'write_only':True, 'required': True},
+            'NoticeReceivers': {'write_only':True, 'required': True},
+            'NoticeNeedToRelay': {'write_only':True, 'required': True}
+        }
+    
+    def validate_NoticeRelay(self, value):
+        if value!=True:
+            raise serializers.ValidationError("请勾选转发")
+        else:
+            return value
+
+    def validate_NoticeReceivers(self, value):
+        schema  =  {
+            "type":"object",
+            "properties":{
+                "ntcRev" : {
+                    "type" :"array",
+                    "items" : {
+                        "type": "integer"
+                    },
+                    "minItems": 1,
+                    "uniqueItems": True
+                },
+            },
+            "required" : ["ntcRev"]
+        }
+        try:
+            validate(value, schema)
+            NoticeReceivers=value['ntcRev']
+            print(NoticeReceivers)
+            if self.context['request'].user.PersonNo in NoticeReceivers:
+                raise serializers.ValidationError("通知目标不可以为自己")
+            qst=CustomUsers.objects.filter(PersonNo__in=NoticeReceivers)
+            for q in qst:
+                if q.PersonDirectSuperior!=self.context['request'].user:
+                    raise serializers.ValidationError("通知目标必须为直接下级")
+        except ValidationError as e:
+            raise serializers.ValidationError("请求参数不合法")
+        else:
+            return value
+
+    def update(self,instance,validated_data):
+        ist=NoticeReceiveEvent.objects.get(NoticeOriginalEvent=instance.id, NoticeReceiver=self.context['request'].user)
+        ist.NoticeRead=True
+        ist.NoticeRelay=validated_data.get('NoticeRelay',None)
+        ist.save()
+        NoticeReceivers=validated_data.pop('NoticeReceivers',None)
+        NoticeReceivers=NoticeReceivers['ntcRev']
+        #print(NoticeReceivers)
+        noticeNeedToRelay=validated_data.pop('NoticeNeedToRelay',None)
+        for i in range(len(NoticeReceivers)):
+            #当前级处理者为NoticeReceivers[i] 当前级为i
+            #print(CustomUsers.objects.filter(PersonNo=NoticeReceivers[i]))
+            NoticeReceiveEvent.objects.create(
+                NoticeOriginalEvent=instance,
+                NoticeReceiver=CustomUsers.objects.filter(PersonNo=NoticeReceivers[i])[0],
+                NeedToRelay=noticeNeedToRelay & CustomUsers.objects.filter(PersonDirectSuperior=NoticeReceivers[i]).exists(),#有下属才行
+            )
+        return instance
+
+class NoticeDetailSerializerForGet(serializers.ModelSerializer):
+    class Meta:
+        model = NoticeRaiseEvent
+        fields=[
+            "id",
+            "NoticeRaiseTitle",
+            "NoticeRaiser",
+            "NoticeRaiseTime",
+            "NoticeRaiseInfo",
+        ]
+
+class ListUnreadNoticeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NoticeRaiseEvent
+        fields = [
+            'id',
+            'NoticeRaiseTitle',
+            'NoticeRaiser',
+            'NoticeRaiseTime',
+        ]
+
+class NoticeStatusSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUsers
+        fields = [
+            'PersonNo',
+            'PersonLastName',
+            'PersonFirstName',
+            'PersonPhone',
+        ]
 
 #{"reqInfo": "测试"}
 #{"reqRev": [2019214290,2019214288]}
 
 #{"hdlInfo": "测试"}
+
+#{"ntcInfo": "测试通知"}
+#{"ntcRev": [2019214245,2019214288]}

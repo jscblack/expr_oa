@@ -29,9 +29,9 @@ ALLOWED_HOSTS = []
 
 
 # Application definition
-REDOC_SETTINGS = {
-   'SPEC_URL': "/static/api.yaml",
-}
+# REDOC_SETTINGS = {
+#    'SPEC_URL': "/static/api.yaml",
+# }
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     "oa",
     "drf_multiple_model",
     "drf_yasg2",
+    "phonenumbers",
 ]
 
 AUTH_USER_MODEL = 'oa.CustomUsers'

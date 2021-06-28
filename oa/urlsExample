@@ -11,4 +11,9 @@ http://localhost:8000/handleProcess/54 get post
 http://localhost:8000/modifyProcessRaiseEvent/54/ get post
 
 http://localhost:8000/createNotice/ post 可创建
-http://localhost:8000/noticeDetail/1 post 创建者可修改，查阅者可转送，均可读
+http://localhost:8000/modifyNoticeDetail/9  创建者可修改
+http://localhost:8000/noticeDetail/9 post 查看详情，查阅者可转送，均可读
+http://localhost:8000/noticeStatus/9 post 创建者与转发者可以查看子用户的阅读情况
+http://localhost:8000/listUnreadNotice/ post 
+
+

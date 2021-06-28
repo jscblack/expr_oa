@@ -119,10 +119,10 @@ class HandleProcess(generics.RetrieveUpdateAPIView):
         else:
             return HandleProcessSerializerForGet
 
-class modifyProcessRaiseEvent(generics.RetrieveUpdateAPIView):
+class ModifyProcessRaiseEvent(generics.RetrieveUpdateAPIView):
     # 修改流程发起，仅1和5可修改
     # lookup_field = 'ProcessOriginalEvent'
-    permission_classes = [IsAvailableOfModify]
+    permission_classes = [IsAvailableOfModifyProcessRaiseEvent]
     
     def get_queryset(self):
         Pid=self.kwargs['pk']
@@ -134,3 +134,72 @@ class modifyProcessRaiseEvent(generics.RetrieveUpdateAPIView):
             return ModifyProcessRaiseEventSerializerForPut
         else:
             return ModifyProcessRaiseEventSerializerForGet
+
+class CreateNotice(generics.CreateAPIView):
+    #发起通知 只可以向下级发起通知
+    permission_classes = [permissions.IsAuthenticated]
+    #queryset=
+    serializer_class = CreateNoticeSerializer
+
+class ModifyNoticeDetail(generics.RetrieveUpdateAPIView):
+    permission_classes = [IsAvailableOfModifyNotice]
+    
+    def get_queryset(self):
+        Pid=self.kwargs['pk']
+        queryset=NoticeRaiseEvent.objects.filter(pk=Pid)
+        return queryset
+
+    def get_serializer_class(self):
+        if self.request.method == "PUT":
+            return ModifyNoticeDetailSerializerForPut
+        else:
+            return ModifyNoticeDetailSerializerForGet
+
+class NoticeDetail(generics.RetrieveUpdateAPIView):
+    permission_classes = [IsAvailableOfNotice]
+    def get_queryset(self):
+        Pid=self.kwargs['pk']
+        queryset=NoticeRaiseEvent.objects.filter(pk=Pid)
+        return queryset
+
+    def get_serializer_class(self):
+        if self.request.method == "PUT":
+            if NoticeReceiveEvent.objects.filter(NoticeOriginalEvent=self.kwargs['pk'],NoticeReceiver=self.request.user,NeedToRelay=True).exists():
+                return NoticeDetailSerializerForPutForRelayer
+            else:
+                return NoticeDetailSerializerForPutForReceiver
+        else:
+            return NoticeDetailSerializerForGet
+
+class ListUnreadNotice(generics.ListAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    def get_queryset(self):
+        qst = NoticeReceiveEvent.objects.filter(NoticeReceiver=self.request.user, NoticeRead=False).values('NoticeOriginalEvent')
+        ProcList=[]
+        for q in qst:
+            ProcList.append(q['NoticeOriginalEvent'])
+        queryset=NoticeRaiseEvent.objects.filter(id__in=ProcList)
+        return queryset
+    serializer_class = ListUnreadNoticeSerializer
+
+class NoticeStatus(generics.ListAPIView):
+    permission_classes = [IsAvailableOfNoticeStatus]
+    # pagination_class = LimitPagination
+    def get_queryset(self):
+        Pid=self.kwargs['pk']
+        Qid=self.request.user
+        # 查询 母通知为pid，未读的直接下属 结果应当为下属 
+        #rqst = CustomUserManager.objects.raw("select NoticeReceiver_id from oa_noticereceiveevent where NoticeReceiver_id in (select PersonNo from oa_customusers where PersonDirectSuperior_id = %s) and NoticeRead=0 and NoticeOriginalEvent_id = %s",  (Qid,Pid,))
+        # select PersonNo from oa_customusers where PersonDirectSuperior_id = %s
+        innerqst=CustomUsers.objects.filter(PersonDirectSuperior=self.request.user).values('PersonNo')
+        innerProcList=[]
+        for q in innerqst:
+            innerProcList.append(q['PersonNo'])
+        outterqst=NoticeReceiveEvent.objects.filter(NoticeOriginalEvent=Pid, NoticeRead=False, NoticeReceiver__in=innerProcList).values('NoticeReceiver')
+        outterProcList=[]
+        for q in outterqst:
+            outterProcList.append(q['NoticeReceiver'])
+        print(q)
+        return CustomUsers.objects.filter(PersonNo__in=outterProcList)
+    serializer_class = NoticeStatusSerializer
+

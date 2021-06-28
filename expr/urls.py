@@ -39,6 +39,7 @@ router = routers.DefaultRouter()
 #router.register(r"users", CustomUserAllViewSet)
 
 urlpatterns = [
+    url(r'^redoc/$', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     path('', include(router.urls)),
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
     path("listUsers/", CustomUserAll.as_view()),
@@ -50,9 +51,15 @@ urlpatterns = [
     path("processDetail/<int:pk>/",ProcessDetail.as_view()),
     path("listUnhandledProcess/",ListUnhandledProcess.as_view()),
     path("handleProcess/<int:ProcessOriginalEvent>/",HandleProcess.as_view()),
-    path("modifyProcessRaiseEvent/<int:pk>/",modifyProcessRaiseEvent.as_view()),
+    path("modifyProcessRaiseEvent/<int:pk>/",ModifyProcessRaiseEvent.as_view()),
+    path("createNotice/",CreateNotice.as_view()),
+    path("modifyNoticeDetail/<int:pk>/",ModifyNoticeDetail.as_view()),
+    path("noticeDetail/<int:pk>/",NoticeDetail.as_view()),
+    path("noticeStatus/<int:pk>/",NoticeStatus.as_view()),
+    path("listUnreadNotice/",ListUnreadNotice.as_view()),
+    
     url(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
-    # url(r'^swagger/$', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
-    url(r'^redoc/$', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
+    url(r'^swagger/$', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
+    
 
 ]

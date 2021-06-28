@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.db.models import constraints
 from oa.customUserManager import CustomUserManager
 # Create your models here.
 
@@ -37,6 +38,7 @@ class CustomUsers(AbstractUser):
     class Meta:
         verbose_name = "用户"
         verbose_name_plural = verbose_name
+        
 
     def __str__(self):
         return f"{self.PersonNo} ({self.PersonLastName} {self.PersonFirstName})"
@@ -51,7 +53,8 @@ class ProcessRaiseEvent(models.Model):
         (5, 'WaittingToBeModified'),#需要修改
     ]
     ProcessRaiser=models.ForeignKey("CustomUsers", on_delete=models.PROTECT)
-    ProcessRaiseTime=models.DateTimeField(auto_now_add=True)
+    ProcessRaiseTime=models.DateTimeField(auto_now=True)
+    ProcessRaiseTitle=models.CharField(max_length=50)
     ProcessRaiseInfo=models.JSONField()
     ProcessRaiseStatus=models.IntegerField(default=1,choices=ProcessRaiseStatusTypes)
     class Meta:
@@ -60,6 +63,7 @@ class ProcessRaiseEvent(models.Model):
 
     def __str__(self):
         # return f"({self.id}) {self.ProcessRaiseInfo}"
+        return f"{self.id} ({self.ProcessRaiseTitle})"
         pass
 
     # def get_absolute_url(self):
@@ -91,3 +95,36 @@ class ProcessHandleEvent(models.Model):
     def __str__(self):
         # return f"({self.ProcessOriginalEvent})"
         pass
+
+class NoticeRaiseEvent(models.Model):
+    NoticeRaiser=models.ForeignKey("CustomUsers", on_delete=models.PROTECT)
+    NoticeRaiseTime=models.DateTimeField(auto_now=True)
+    NoticeRaiseTitle=models.CharField(max_length=50)
+    NoticeRaiseInfo=models.JSONField()
+    
+    def __str__(self):
+        pass
+
+    class Meta:
+        db_table = ''
+        managed = True
+        verbose_name = 'NoticeRaiseEvent'
+        verbose_name_plural = 'NoticeRaiseEvents'
+
+class NoticeReceiveEvent(models.Model):
+    NoticeOriginalEvent=models.ForeignKey("NoticeRaiseEvent", on_delete=models.PROTECT)
+    NoticeReceiver=models.ForeignKey("CustomUsers", on_delete=models.PROTECT)
+    NeedToRelay=models.BooleanField(default=False) #是否需要向下一级转发（由上一级给定）
+    NoticeRelay=models.BooleanField(default=False) #是否已转发
+    NoticeRead=models.BooleanField(default=False) #是否已读
+    
+    # 向下一级转发的指令应当依附于当前级 
+
+    def __str__(self):
+        pass
+
+    class Meta:
+        db_table = ''
+        managed = True
+        verbose_name = 'NoticeReceiveEvent'
+        verbose_name_plural = 'NoticeReceiveEvents'
