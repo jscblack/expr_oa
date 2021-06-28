@@ -15,8 +15,8 @@ class CustomUsers(AbstractUser):
     )
     PersonNo=models.IntegerField(primary_key=True)
     PersonEmail = models.EmailField()
-    PersonLastName=models.CharField(max_length=50,verbose_name="姓")
-    PersonFirstName=models.CharField(max_length=50,verbose_name="名")
+    PersonLastName=models.CharField(max_length=50)
+    PersonFirstName=models.CharField(max_length=50)
     PersonGender=models.IntegerField(choices =PersonGenerChoice)
     PersonAge = models.IntegerField()
     PersonPhone = models.CharField(max_length=11)
@@ -24,7 +24,7 @@ class CustomUsers(AbstractUser):
     PersonDirectSuperior=models.ForeignKey("self",on_delete=models.PROTECT)
     USERNAME_FIELD = 'PersonNo'
     REQUIRED_FIELDS = ['PersonEmail','PersonLastName','PersonFirstName','PersonGender','PersonAge','PersonPhone','PersonJob','PersonDirectSuperior'] 
-    EMAIL_FIELD = 'PersonEmail' 
+    EMAIL_FIELD = 'PersonEmail'
 
     objects = CustomUserManager()
 

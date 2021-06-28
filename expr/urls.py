@@ -19,8 +19,23 @@ from django.urls import include, path
 from django.conf.urls import url
 from rest_framework import routers
 from oa.views import *
+from drf_yasg2.views import get_schema_view
+from drf_yasg2 import openapi
 
+schema_view = get_schema_view(
+   openapi.Info(
+      title="OA API",
+      default_version='v1',
+      description="OA description",
+      #terms_of_service="https://www.google.com/policies/terms/",
+      #contact=openapi.Contact(email="contact@snippets.local"),
+      #license=openapi.License(name="BSD License"),
+   ),
+   public=True,
+   permission_classes=[permissions.AllowAny],
+)
 router = routers.DefaultRouter()
+
 #router.register(r"users", CustomUserAllViewSet)
 
 urlpatterns = [
@@ -36,4 +51,8 @@ urlpatterns = [
     path("listUnhandledProcess/",ListUnhandledProcess.as_view()),
     path("handleProcess/<int:ProcessOriginalEvent>/",HandleProcess.as_view()),
     path("modifyProcessRaiseEvent/<int:pk>/",modifyProcessRaiseEvent.as_view()),
+    url(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
+    # url(r'^swagger/$', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
+    url(r'^redoc/$', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
+
 ]
