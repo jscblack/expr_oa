@@ -391,7 +391,8 @@ class ModifyProcessRaiseEventSerializerForPut(serializers.ModelSerializer):
             return value
     
     def update(self,instance,validated_data):
-        instance.ProcessRaiseInfo=validated_data.get('ProcessRaiseEvent',None)
+        instance.ProcessRaiseInfo=validated_data.get('ProcessRaiseInfo',None)
+        instance.ProcessRaiseStatus=1
         instance.save()
         nextProcessHandleEvent = ProcessHandleEvent.objects.get(ProcessOriginalEvent=instance.id,ProcessHandleLevel=1)
         nextProcessHandleEvent.ProcessHandleStatus = 2

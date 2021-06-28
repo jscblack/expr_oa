@@ -1,9 +1,14 @@
 http://localhost:8000/listUsers/ get
 http://localhost:8000/addUser/ post
+http://localhost:8000/filterUsers/ get
 http://localhost:8000/userDetail/2019214290 get post
+
 http://localhost:8000/createProcess/ post
 http://localhost:8000/listProcesses/ get
 http://localhost:8000/processDetail/54 get
 http://localhost:8000/listUnhandledProcess/ get
 http://localhost:8000/handleProcess/54 get post
 http://localhost:8000/modifyProcessRaiseEvent/54/ get post
+
+http://localhost:8000/createNotice/ post 可创建
+http://localhost:8000/noticeDetail/1 post 创建者可修改，查阅者可转送，均可读

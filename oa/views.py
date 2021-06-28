@@ -1,5 +1,5 @@
 from django.contrib.auth.models import User, Group
-from rest_framework import viewsets,permissions,generics
+from rest_framework import viewsets,permissions,generics,filters
 from drf_multiple_model.views import ObjectMultipleModelAPIView
 from drf_multiple_model.pagination import MultipleModelLimitOffsetPagination
 from oa.serializers import *
@@ -9,27 +9,40 @@ from oa.permissions import *
 # Create your views here.
 
 class CustomUserAll(generics.ListAPIView):
+    # 对于所有人可以查看所有的用户列表
     permission_classes = [permissions.IsAuthenticated]
     queryset = CustomUsers.objects.all()
-    #对于所有人可以查看所有的用户列表
     serializer_class = CustomUserAllSerializer
     # serializer_class = CustomUserSerializer
-    
+
+class CustomUserFilter(generics.ListAPIView):
+    # 仅可查看自己直接下属或间接下属的信息并筛选
+    permission_classes = [permissions.IsAuthenticated]
+    def get_queryset(self):
+        AuthList=[self.request.user.PersonNo]
+        flag=1
+        while flag==1:
+            flag=0
+            qst=CustomUsers.objects.filter(PersonDirectSuperior__in=AuthList)
+            for q in qst:
+                if q.PersonNo not in AuthList:
+                    flag=1
+                    AuthList.append(q.PersonNo)
+        queryset = CustomUsers.objects.filter(PersonNo__in=AuthList)
+        return queryset
+    serializer_class = CustomUserDetailSerializerForGet
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['=PersonEmail', 'PersonLastName','PersonFirstName','=PersonGender','=PersonAge','=PersonPhone','=PersonJob','=PersonDirectSuperior__PersonNo']
+
 class CustomUserDetail(generics.RetrieveUpdateAPIView):
-    #users/pk
+    # 只可以查看自己直接下属或间接下属的详细信息
     permission_classes = [IsSuperiorOfRequestOrAdmin]
-    #permission_classes = [permissions.IsAuthenticated]
+
     def get_queryset(self):
         #print(self.kwargs['pk'])
         queryset = CustomUsers.objects.filter(PersonNo=self.kwargs['pk'])
         #print(len(queryset))
         return queryset
-    # 只可以查看自己直接下属或间接下属的详细信息
-    # def get_serializer_class(self):
-    #     if self.request.method == "PUT":
-    #         return CustomUserDetailUpdateSerializer
-    #     return CustomUserDetailSerializer
-    # serializer_class = CustomUserDetailSerializerForGet
 
     def get_serializer_class(self):
         if self.request.method == "PUT":
@@ -79,12 +92,6 @@ class ProcessDetail(ObjectMultipleModelAPIView):
             {'queryset': ProcessHandleEvent.objects.filter(ProcessOriginalEvent=Pid), 'serializer_class': ProcessDetailSerializerOfProcessHandleEvent},
         ]
         return querylist
-    # def get_queryset(self):
-    #     queryset = ProcessRaiseEvent.objects.filter(ProcessRaiser=self.request.user)
-    #     return queryset
-    # return queryset
-    
-    # serializer_class = ProcessDetailSerializer
 
 class ListUnhandledProcess(generics.ListAPIView):
     #查看待办的所有流程，无参

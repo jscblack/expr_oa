@@ -27,6 +27,7 @@ urlpatterns = [
     path('', include(router.urls)),
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
     path("listUsers/", CustomUserAll.as_view()),
+    path("filterUsers/", CustomUserFilter.as_view()),
     path("addUser/", CustomUserAdd.as_view()),
     path("userDetail/<int:pk>/", CustomUserDetail.as_view()),
     path("createProcess/",CreateProcess.as_view()),
