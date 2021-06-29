@@ -444,20 +444,23 @@ class ModifyProcessRaiseEventSerializerForGet(serializers.ModelSerializer):
         ]
 
 class CreateNoticeSerializer(serializers.ModelSerializer):
-    CreateNoticeReceivers = serializers.JSONField(write_only=True)
+    CreateNoticeReceivers = serializers.JSONField(write_only=True,default={"ntcRev": []})
     NoticeNeedToRelay=serializers.BooleanField(write_only=True)
+    NoticeForAllFellow = serializers.BooleanField(write_only=True)
     #CreateProcessReceivers = serializers.CharField(max_length=2048)
     class Meta:
         model = NoticeRaiseEvent
         fields = [
             'NoticeRaiseTitle',
             'NoticeRaiseInfo',
+            'NoticeForAllFellow',
             'CreateNoticeReceivers',
             'NoticeNeedToRelay'
         ]
         extra_kwargs = {
-            'CreateNoticeReceivers': {'write_only':True, 'required': True},
-            'NoticeNeedToRelay': {'write_only':True, 'required': True}
+            'CreateNoticeReceivers': {'write_only':True, 'required': False,'default':{"ntcRev": []}},
+            'NoticeNeedToRelay': {'write_only':True, 'required': True},
+            'NoticeForAllFellow': {'write_only':True, 'required': False},
         }
 
     def validate_NoticeRaiseInfo(self, value):
@@ -476,6 +479,8 @@ class CreateNoticeSerializer(serializers.ModelSerializer):
             return value
 
     def validate_CreateNoticeReceivers(self, value):
+        if value==None:
+            return value
         schema  =  {
             "type":"object",
             "properties":{
@@ -505,25 +510,48 @@ class CreateNoticeSerializer(serializers.ModelSerializer):
         else:
             return value
 
+    def validate(self, attrs):
+        if attrs['NoticeForAllFellow']==None and attrs['NoticeReceivers']==None:
+            raise serializers.ValidationError("通知目标不可以为空")
+        return attrs
+
     def create(self,validated_data):
         NoticeReceivers=validated_data.pop('CreateNoticeReceivers',None)
         noticeNeedToRelay=validated_data.pop('NoticeNeedToRelay',None)
+        NoticeForAllFellow=validated_data.pop('NoticeForAllFellow',None)
         #handle
         print("debug")
-        NoticeReceivers=NoticeReceivers['ntcRev']#array
+        if NoticeReceivers!=None:
+            NoticeReceivers=NoticeReceivers['ntcRev']#array
         #print(NoticeReceivers)
         print(validated_data)
         noticeRaiseEvent = NoticeRaiseEvent.objects.create(
             NoticeRaiser=self.context['request'].user,
             **validated_data
             )
-        for i in range(len(NoticeReceivers)):
-            #当前级处理者为NoticeReceivers[i] 当前级为i
-            NoticeReceiveEvent.objects.create(
-                NoticeOriginalEvent=noticeRaiseEvent,
-                NoticeReceiver=CustomUsers.objects.filter(PersonNo=NoticeReceivers[i])[0],
-                NeedToRelay=noticeNeedToRelay & CustomUsers.objects.filter(PersonDirectSuperior=NoticeReceivers[i]).exists()#有下属才行
-            )
+        if NoticeForAllFellow==1:
+            qst=CustomUsers.objects.filter(PersonDirectSuperior=self.context['request'].user)
+            # ProcList=[]
+            for q in qst:
+                if q.PersonNo!=self.context['request'].user.PersonNo:
+                    NoticeReceiveEvent.objects.create(
+                    NoticeOriginalEvent=noticeRaiseEvent,
+                    NoticeReceiver=q,
+                    NeedToRelay=noticeNeedToRelay & CustomUsers.objects.filter(PersonDirectSuperior=q).exists(),#有下属才行
+                    )
+                    # ProcList.append(q['PersonNo'])
+        else:            
+            for i in range(len(NoticeReceivers)):
+                #当前级处理者为NoticeReceivers[i] 当前级为i
+                #print(CustomUsers.objects.filter(PersonNo=NoticeReceivers[i]))
+                #当前级处理者为NoticeReceivers[i] 当前级为i
+                NoticeReceiveEvent.objects.create(
+                    NoticeOriginalEvent=noticeRaiseEvent,
+                    NoticeReceiver=CustomUsers.objects.filter(PersonNo=NoticeReceivers[i])[0],
+                    NeedToRelay=noticeNeedToRelay & CustomUsers.objects.filter(PersonDirectSuperior=NoticeReceivers[i]).exists()#有下属才行
+                )
+        noticeNeedToRelay=validated_data.pop('NoticeNeedToRelay',None)
+        
         return noticeRaiseEvent
 
 class ModifyNoticeDetailSerializerForPut(serializers.ModelSerializer):
@@ -591,19 +619,22 @@ class NoticeDetailSerializerForPutForReceiver(serializers.ModelSerializer):
         return instance
 
 class NoticeDetailSerializerForPutForRelayer(serializers.ModelSerializer):
-    NoticeRelay=serializers.BooleanField(write_only=True) #是否已读
-    NoticeReceivers = serializers.JSONField(write_only=True)
+    NoticeRelay=serializers.BooleanField(write_only=True) #是否转发
+    NoticeReceivers = serializers.JSONField(write_only=True,default={"ntcRev": []})
+    NoticeForAllFellow = serializers.BooleanField(write_only=True)
     NoticeNeedToRelay=serializers.BooleanField(write_only=True)
     class Meta:
         model = NoticeRaiseEvent
         fields=[
             "NoticeRelay", #是否完成转发
+            "NoticeForAllFellow",#全部
             "NoticeReceivers", #接收者
             "NoticeNeedToRelay",  #下一级是否需要转发
         ]
         extra_kwargs = {
             'NoticeRelay': {'write_only':True, 'required': True},
-            'NoticeReceivers': {'write_only':True, 'required': True},
+            'NoticeForAllFellow': {'write_only':True, 'required': False},
+            'NoticeReceivers': {'write_only':True, 'required': False,'default':{"ntcRev": []}},
             'NoticeNeedToRelay': {'write_only':True, 'required': True}
         }
     
@@ -614,6 +645,8 @@ class NoticeDetailSerializerForPutForRelayer(serializers.ModelSerializer):
             return value
 
     def validate_NoticeReceivers(self, value):
+        if value==None:
+            return value
         schema  =  {
             "type":"object",
             "properties":{
@@ -643,23 +676,40 @@ class NoticeDetailSerializerForPutForRelayer(serializers.ModelSerializer):
         else:
             return value
 
+    def validate(self, attrs):
+        if attrs['NoticeForAllFellow']==None and attrs['NoticeReceivers']==None:
+            raise serializers.ValidationError("通知目标不可以为空")
+        return attrs
+
     def update(self,instance,validated_data):
         ist=NoticeReceiveEvent.objects.get(NoticeOriginalEvent=instance.id, NoticeReceiver=self.context['request'].user)
         ist.NoticeRead=True
         ist.NoticeRelay=validated_data.get('NoticeRelay',None)
         ist.save()
-        NoticeReceivers=validated_data.pop('NoticeReceivers',None)
-        NoticeReceivers=NoticeReceivers['ntcRev']
-        #print(NoticeReceivers)
         noticeNeedToRelay=validated_data.pop('NoticeNeedToRelay',None)
-        for i in range(len(NoticeReceivers)):
-            #当前级处理者为NoticeReceivers[i] 当前级为i
-            #print(CustomUsers.objects.filter(PersonNo=NoticeReceivers[i]))
-            NoticeReceiveEvent.objects.create(
-                NoticeOriginalEvent=instance,
-                NoticeReceiver=CustomUsers.objects.filter(PersonNo=NoticeReceivers[i])[0],
-                NeedToRelay=noticeNeedToRelay & CustomUsers.objects.filter(PersonDirectSuperior=NoticeReceivers[i]).exists(),#有下属才行
-            )
+        if validated_data.get('NoticeForAllFellow',None)==1:
+            qst=CustomUsers.objects.filter(PersonDirectSuperior=self.context['request'].user)
+            # ProcList=[]
+            for q in qst:
+                if q.PersonNo!=self.context['request'].user.PersonNo:
+                    NoticeReceiveEvent.objects.create(
+                    NoticeOriginalEvent=instance,
+                    NoticeReceiver=q,
+                    NeedToRelay=noticeNeedToRelay & CustomUsers.objects.filter(PersonDirectSuperior=q).exists(),#有下属才行
+                    )
+                    # ProcList.append(q['PersonNo'])
+        else:
+            NoticeReceivers=validated_data.pop('NoticeReceivers',None)
+            NoticeReceivers=NoticeReceivers['ntcRev']
+            
+            for i in range(len(NoticeReceivers)):
+                #当前级处理者为NoticeReceivers[i] 当前级为i
+                #print(CustomUsers.objects.filter(PersonNo=NoticeReceivers[i]))
+                NoticeReceiveEvent.objects.create(
+                    NoticeOriginalEvent=instance,
+                    NoticeReceiver=CustomUsers.objects.filter(PersonNo=NoticeReceivers[i])[0],
+                    NeedToRelay=noticeNeedToRelay & CustomUsers.objects.filter(PersonDirectSuperior=NoticeReceivers[i]).exists(),#有下属才行
+                )
         return instance
 
 class NoticeDetailSerializerForGet(serializers.ModelSerializer):
